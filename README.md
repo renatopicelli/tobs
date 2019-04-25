@@ -1,7 +1,8 @@
 Matlab code for topology optimization with binary design variables and sequential integer linear programming.
 
-Authors: Raghavendra Sivapuram (University of California), rsivapur@eng.ucsd.edu;
-         Renato Picelli (University of São Paulo), rpicelli@usp.br;
+Authors:
+Raghavendra Sivapuram (University of California), rsivapur@eng.ucsd.edu;
+Renato Picelli (University of São Paulo), rpicelli@usp.br;
 
 Implementation of the Topology Optimization of Binary Structures (TOBS) method.
 
