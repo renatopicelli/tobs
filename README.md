@@ -1,6 +1,6 @@
 # Topology Optimization of Binary Structures (TOBS)
 
-Matlab code for topology optimization with binary design variables and sequential integer linear programming.
+Matlab code for topology optimization with binary design variables and sequential integer linear programming via the TOBS method.
 
 ## Authors:
 
@@ -26,8 +26,8 @@ addpath('/opt/ibm/ILOG/CPLEX_Studio1271/cplex/examples/src/');
 and
 
 ```matlab
-%             options.Optimizer = 'cplex';
-            options.Optimizer = 'intlinprog';
+%    options.Optimizer = 'cplex';
+options.Optimizer = 'intlinprog';
 ```
 
 at TopOpt/TOBS.m must be edited.
