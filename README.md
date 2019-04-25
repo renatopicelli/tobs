@@ -26,7 +26,7 @@ addpath('/opt/ibm/ILOG/CPLEX_Studio1271/cplex/examples/src/');
 and
 
 ```matlab
-%    options.Optimizer = 'cplex';
+% options.Optimizer = 'cplex';
 options.Optimizer = 'intlinprog';
 ```
 
@@ -38,6 +38,3 @@ at TopOpt/TOBS.m must be edited.
 Linear Programming, Finite Elements in Analysis and Design 139 (2018) 49–61
 
 [2] R. Sivapuram, R. Picelli, Y.M. Xie, Topology optimization of binary microstructures involving various non-volume constraints, Computational Materials Science (2018) 154, 405-425
-
-## Disclaimer:
-The authors reserve all rights but do not guaranty that the code is free from errors. Furthermore, they shall not be liable in any event caused by the use of the program.
