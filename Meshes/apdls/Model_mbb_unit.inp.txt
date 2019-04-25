@@ -1,0 +1,113 @@
+ 
+FINISH  ! Make sure we are at BEGIN level   
+/CLEAR,NOSTART  ! Clear model since no SAVE found   
+
+/CWD,'C:\Users\renat\Documents\POLI_JP\PESQUISA\TOBS_demo\Meshes\apdls'
+*ABBR,Update_model,/INPUT,'Model_mbb_unit’,’inp'
+*ABBR,Ansys_to_Data,/INPUT,'ansys2data','inp'
+
+!-------------------------------------------------------------------------------
+! File name
+arquivo = 'MESHdata'                                                          
+   
+!-------------------------------------------------------------------------------    
+/PREP7 !Enter the pre-processor 
+
+! Rectangle dimensions
+a = 120
+b = 40
+
+! Element dimension
+l = 0.125
+
+!-------------------------------------------------------------------------------
+! Define keypoints 
+                         
+RECTNG,0,a,0,b
+                 
+!-------------------------------------------------------------------------------
+! Define Element Type
+ET,1,PLANE42         
+
+!-------------------------------------------------------------------------------
+! Element Options
+KEYOPT,1,2,1
+
+!-------------------------------------------------------------------------------
+! Define Material Properties
+MPTEMP,1,0
+MPDATA,EX,1,,1.0 ! Young's modulus 
+MPDATA,PRXY,1,,0.3   ! Poisson's ratio
+MPDATA,DENS,1,,1.0  ! Density
+ 
+!------------------------------------------------------------------------------- 
+                           ! !  ! Meshing ! ! !
+!-------------------------------------------------------------------------------
+!-------------------------------------------------------------------------------
+! Structure
+TYPE,1   
+MAT,1    
+MSHKEY,1
+AESIZE,ALL,l
+AMESH,ALL
+
+!------------------------------------------------------------------------------- 
+                     ! !  ! Boundary conditions ! ! !
+!-------------------------------------------------------------------------------
+! Structure
+
+ALLSEL
+NSEL,S,LOC,X,-0.0001,0.0001
+D,ALL,UX,0
+ALLSEL   
+
+ALLSEL
+NSEL,S,LOC,X,119.9999,120.0001
+NSEL,R,LOC,Y,-0.0001,0.0001
+D,ALL,UY,0 
+ALLSEL  
+
+!ALLSEL
+!LSEL,S,,,17 
+!NSLL,R,1
+!D,ALL,UX,0
+!D,ALL,UY,0
+!ALLSEL
+
+
+!------------------------------------------------------------------------------- 
+                       ! !  ! Nodal Loads ! ! !
+!-------------------------------------------------------------------------------
+! Structure
+
+
+ALLSEL
+NSEL,S,LOC,X,-0.0001,0.0001
+NSEL,R,LOC,Y,-0.0001,0.0001
+F,ALL,FY,-1
+ALLSEL,ALL
+
+/eof
+
+/SOL
+!*  
+ANTYPE,2
+!*  
+!*  
+MODOPT,LANB,6   
+EQSLV,SPAR  
+MXPAND,6, , ,0  
+LUMPM,0 
+PSTRES,0
+!*  
+MODOPT,LANB,6,0,0, ,OFF 
+/STATUS,SOLU
+SOLVE   
+
+
+/POST1  
+SET,FIRST   
+!*  
+/EFACET,1   
+PLNSOL, U,SUM, 0,1.0
+SET,LIST
