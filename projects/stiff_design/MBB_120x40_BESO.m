@@ -7,15 +7,15 @@
 % MATLAB code for structural topology optimization using the BESO method
 % Find minimum structural compliance subject to a volume constraint
 
-% 14.03.2019
+% 03.06.2019
 
 function MBB_120x40_BESO
 
 close all; clear all; clc
 
-addpath(genpath('../../FEA'))
-addpath(genpath('../../Meshes'))
-addpath(genpath('../../TopOpt'))
+addpath(genpath('..\..\FEA'))
+addpath(genpath('..\..\Meshes'))
+addpath(genpath('..\..\TopOpt'))
 
 disp(' ')
 disp('         *****************************')
@@ -28,8 +28,8 @@ disp(' ')
 %-------------------------------------------------------------------------%
 
 % Material properties
-E = 1.0; % Young's modulus
-v = 0.3;   % Poisson's ratio
+E = 1.0;   % Young's modulus
+nu = 0.3;  % Poisson's ratio
 
 % Optimization parameters
 radius = 6;                  % Filter radius in length unit
@@ -44,22 +44,13 @@ tau = 0.001;                 % Convergence tolerance
 %-------------------------------------------------------------------------%
 
 % % Prepare FEA
-fea = FEA('MBB_120x40_240x80ele');
-fea.E = E;
-fea.v = v;
-fea.F = AssemblePointLoads(fea);
-fea.H = BuildFilterMatrix(fea,radius);
+fea = FEA('MBB_120x40_120x40ele');
+fea = AddSolidMaterial(fea, E, nu, 1.0);
+fea = AssemblePointLoads(fea);
+fea = BuildFilterMatrix(fea,radius);
 
 % Prepare BESO
-beso = BESO();
-% Assign evolutionary ratio
-beso.ER = ER;
-% Assign maximum admission ratio
-beso.ARmax = ARmax;
-% Assign initial design variables distribution
-beso.design_variables = ones(size(fea.mesh.incidence,1),1);
-% % Define constraints
-beso.final_volume_fraction = final_volume_fraction;
+beso = BESO(final_volume_fraction, ER, ARmax, size(fea.mesh.incidence,1));
 
 %% --------------------------------------------------------------------- %%
 %                           ** Optimization **                            %
@@ -75,8 +66,8 @@ loop = 0;
 % Finite Element analysis
 densities = beso.design_variables;
 densities(densities == 0) = rho_min;
-fea.K = AssembleStructuralK(fea,densities);
-fea.U = SolveStaticStructuralFEA(fea);
+fea = AssembleStructuralK(fea,densities);
+fea = SolveStaticStructuralFEA(fea);
 
 % Objective (compliance) and sensitivites
 beso.objective = fea.F'*fea.U;
@@ -121,8 +112,8 @@ while (is_converged == 0)
     % Finite Element analysis
     densities = beso.design_variables;
     densities(densities == 0) = rho_min;
-    fea.K = AssembleStructuralK(fea,densities);
-    fea.U = SolveStaticStructuralFEA(fea);
+    fea = AssembleStructuralK(fea,densities);
+    fea = SolveStaticStructuralFEA(fea);
     
     % Objective and sensitivites
     beso.objective = fea.F'*fea.U;

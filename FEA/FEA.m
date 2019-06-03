@@ -12,16 +12,21 @@ classdef FEA
         
         % Material properties
         E         % Young's modulus
-        v         % Poisson's ratio
-        rho_s     % Solid material density
+        nu        % Poisson's ratio
+        rho       % Solid material density
         th = 1.0; % thickness
+        
+        % Amount of added materials
+        material_counter;
+        % List of element materials
+        materials_list;
         
         % ID matrix (relation node-DOF)
         % (lines = DOF's, columns = nodes)
         ID
         number_of_equations
         
-        % List of element inside design domain
+        % List of elements inside design domain
         design_domain
         
         % Equation matrices
@@ -55,15 +60,32 @@ classdef FEA
             % Number of equations
             fea.number_of_equations = fea.ID(2,end);
             
+            disp(['         Number of equations: ', sprintf('%10i',fea.number_of_equations)])
+            
             % Default design domain (all solid elements)
             fea.design_domain = find(fea.mesh.incidence(:,1) == 1);
             
-            disp(['         Number of equations: ', sprintf('%10i',fea.number_of_equations)])
+            % Initializing material_counter and materials_list
+            fea.material_counter = 0;
+            fea.materials_list = ones(size(fea.mesh.incidence,1),1);
             
         end % end Constructor
         
+        %% Add solid material
+        function fea = AddSolidMaterial(fea, E_in, nu_in, rho_in)
+            
+            % Material counter
+            fea.material_counter = fea.material_counter+1;
+            
+            % Assign material
+            fea.E(fea.material_counter) = E_in;
+            fea.nu(fea.material_counter) = nu_in;
+            fea.rho(fea.material_counter) = rho_in;
+            
+        end % end AddSolidMaterial
+        
         %% Build filter matrix
-        function H = BuildFilterMatrix(fea,radius)
+        function fea = BuildFilterMatrix(fea,radius)
             
             disp(['         Building filter matrix.'])
             
@@ -111,39 +133,41 @@ classdef FEA
             end
 
             % H filter matrix
-            H = sparse(ifilt(1:k),jfilt(1:k),R(1:k),length(fea.design_domain),length(fea.design_domain));
+            fea.H = sparse(ifilt(1:k),jfilt(1:k),R(1:k),length(fea.design_domain),length(fea.design_domain));
 
         end % end BuildFilterMatrix
         
         %% Assemble point loads
-        function point_loads = AssemblePointLoads(fea)
+        function fea = AssemblePointLoads(fea)
             
             % Load vector assembly
-            point_loads = sparse(zeros(2,1));
-            point_loads(fea.number_of_equations) = 0;
+            fea.F = sparse(zeros(2,1));
+            fea.F(fea.number_of_equations) = 0;
             % Applied forces
             for i = 1:size(fea.mesh.neumann_boundary,1)
                 if (fea.mesh.neumann_boundary(i,1) ~= 0)
-                    point_loads(fea.ID(fea.mesh.neumann_boundary(i,2),fea.mesh.neumann_boundary(i,1)),1) = fea.mesh.neumann_boundary(i,3);
+                    fea.F(fea.ID(fea.mesh.neumann_boundary(i,2),fea.mesh.neumann_boundary(i,1)),1) = fea.mesh.neumann_boundary(i,3);
                 end
             end
             
         end % end AssemblePointLoads
         
         %% Compute structural element stiffness matrix
-        function Ke = ComputeStructuralKe(fea,stress_case)
+        function Ke = ComputeStructuralKe(fea,stress_case,material_index)
 
             % Initializing matrix and getting FEA info
             Ke = zeros(8);
             el = 1; % Structure grid, element 1
             coord = fea.mesh.coordinates;
             inci = fea.mesh.incidence;
+            E = fea.E(material_index);
+            nu = fea.nu(material_index);
 
             % Selecting stress case
             switch stress_case
-                case 0 % Plane stress elasticity matrix
-                    D = (fea.E/(1-fea.v*fea.v))*[1 fea.v 0; fea.v 1 0; 0 0 (1-fea.v)/2];
-                case 1
+                case 1 % Plane stress elasticity matrix
+                    D = (E/(1-nu*nu))*[1 nu 0; nu 1 0; 0 0 (1-nu)/2];
+                case 2
                     disp('Plane-strain not implemented yet!')
             end
             
@@ -196,12 +220,12 @@ classdef FEA
         end % end ComputeStructuralKe
         
         %% Assemble stiffness matrix
-        function K = AssembleStructuralK(fea,densities)
+        function fea = AssembleStructuralK(fea,densities)
             
             clear K
             
             % Compute element stiffness matrix
-            Ke = ComputeStructuralKe(fea,0);
+            Ke = ComputeStructuralKe(fea,1,1);
             
             % Number of elements
             nel = size(fea.mesh.incidence,1);
@@ -228,12 +252,12 @@ classdef FEA
             end
 
             % Assembly
-            K = sparse(I,J,Kg);
+            fea.K = sparse(I,J,Kg);
             
         end % end AssembleStructuralK
         
         %% Solve static case of FEA (Ku = F)
-        function U = SolveStaticStructuralFEA(fea)
+        function fea = SolveStaticStructuralFEA(fea)
             
             % Identifying active DOF's
             dofn = [1:fea.number_of_equations]';
@@ -247,11 +271,11 @@ classdef FEA
             dofa = nonzeros(dofn);
             
             % Solving system responses
-            U = sparse(zeros(10,1));
-            U(fea.number_of_equations) = 0;
+            fea.U = sparse(zeros(10,1));
+            fea.U(fea.number_of_equations) = 0;
 
             % Matlab linear solver
-            U(dofa) = fea.K(dofa,dofa)\fea.F(dofa);
+            fea.U(dofa) = fea.K(dofa,dofa)\fea.F(dofa);
             
         end % end SolveStaticFEA
         
@@ -265,7 +289,7 @@ classdef FEA
             objective = 0;
             
             % Compute element stiffness matrix
-            Ke = ComputeStructuralKe(fea,0);
+            Ke = ComputeStructuralKe(fea,1,1);
 
             % For elements in the design domain
             for i = 1:length(fea.design_domain)

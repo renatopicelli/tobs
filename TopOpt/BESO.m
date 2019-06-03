@@ -11,7 +11,7 @@ classdef BESO
         ER
         ARmax
         
-        % Design variables (binary)
+        % Design variables {0,1}
         design_variables
         
         % Objective and sensitivities
@@ -32,10 +32,20 @@ classdef BESO
     methods
         
         %% Constructor
-        function beso = BESO()
+        function beso = BESO(final_volume_fraction_in, ER_in, ARmax_in, number_of_variables)
             
             disp([' '])
             disp(['         Preparing BESO.'])
+            
+            % Volume constraint
+            beso.final_volume_fraction = final_volume_fraction_in;
+            
+            % Optimization parameters
+            beso.ER = ER_in;
+            beso.ARmax = ARmax_in;
+            
+            % Initial design variables
+            beso.design_variables = ones(number_of_variables,1);
             
         end % end Constructor
         

@@ -2,13 +2,13 @@
 %         ** Topology Optimization of Binary Structures (TOBS) **         %
 %-------------------------------------------------------------------------%
 
-% Renato Picelli (University of S�o Paulo, Santos, Brazil)
+% Renato Picelli (University of São Paulo, Santos, Brazil)
 % Raghavendra Sivapuram (University of California, San Diego, USA)
 
 % MATLAB code for structural topology optimization using the TOBS method
 % Find minimum structural volume subject to a compliance constraint
 
-% 14.03.2019
+% 03.06.2019
 
 function MBB_120x40_minvol
 
@@ -29,8 +29,8 @@ disp(' ')
 %-------------------------------------------------------------------------%
 
 % Material properties
-E = 1.0; % Young's modulus
-v = 0.3; % Poisson's ratio
+E = 1.0;   % Young's modulus
+nu = 0.3;  % Poisson's ratio
 
 % Optimization parameters
 radius = 6;                       % Filter radius in length unit
@@ -46,21 +46,12 @@ tau = 0.001;                      % Convergence tolerance
 
 % % Prepare FEA
 fea = FEA('MBB_120x40_120x40ele');
-fea.E = E;
-fea.v = v;
-fea.F = AssemblePointLoads(fea);
-fea.H = BuildFilterMatrix(fea,radius);
+fea = AddSolidMaterial(fea, E, nu, 1.0);
+fea = AssemblePointLoads(fea);
+fea = BuildFilterMatrix(fea,radius);
 
 % Prepare TOBS
-tobs = TOBS();
-% Assign constraints relaxation parameters
-tobs.epsilons = epsilons;
-% Assign flip limits
-tobs.flip_limits = flip_limits;
-% Assign initial design variables distribution
-tobs.design_variables = ones(size(fea.mesh.incidence,1),1);
-% % Define constraints
-tobs.constraints_limits = compliance_constraint;
+tobs = TOBS(compliance_constraint, epsilons, flip_limits, size(fea.mesh.incidence,1));
 
 %% --------------------------------------------------------------------- %%
 %                           ** Optimization **                            %
@@ -76,8 +67,8 @@ loop = 0;
 % Finite Element analysis
 densities = tobs.design_variables;
 densities(densities == 0) = rho_min;
-fea.K = AssembleStructuralK(fea,densities);
-fea.U = SolveStaticStructuralFEA(fea);
+fea = AssembleStructuralK(fea,densities);
+fea = SolveStaticStructuralFEA(fea);
 
 % Objective (volume) and sensitivites
 tobs.objective = mean(tobs.design_variables);
@@ -123,8 +114,8 @@ while (is_converged == 0)
     % Finite Element analysis
     densities = tobs.design_variables;
     densities(densities == 0) = rho_min;
-    fea.K = AssembleStructuralK(fea,densities);
-    fea.U = SolveStaticStructuralFEA(fea);
+    fea = AssembleStructuralK(fea,densities);
+    fea = SolveStaticStructuralFEA(fea);
     
     % Objective (volume) and sensitivites
     tobs.objective = mean(tobs.design_variables);
