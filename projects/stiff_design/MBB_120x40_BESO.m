@@ -43,8 +43,11 @@ tau = 0.001;                 % Convergence tolerance
 %                         ** Problem set up **                            %
 %-------------------------------------------------------------------------%
 
-% % Prepare FEA
-fea = FEA('MBB_120x40_120x40ele');
+% Set up mesh.
+mesh = Mesh('MBB_120x40_120x40ele');
+
+% Prepare FEA
+fea = FEA(mesh);
 fea = AddSolidMaterial(fea, E, nu, 1.0);
 fea = AssemblePointLoads(fea);
 fea = BuildFilterMatrix(fea,radius);

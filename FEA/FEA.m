@@ -44,10 +44,10 @@ classdef FEA
     methods
         
         %% Constructor
-        function fea = FEA(example)
+        function fea = FEA(mesh)
             
             % Generate finite element mesh
-            fea.mesh = Mesh(example);
+            fea.mesh = mesh;
             
             disp([' '])
             disp(['         Preparing FEA.'])

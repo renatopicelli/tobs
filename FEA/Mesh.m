@@ -7,6 +7,9 @@ classdef Mesh
     %% Properties
     properties
         
+        % Mesh size info
+        Lx, Ly, Lz, nelx, nely, nelz
+        
         % Nodal coordinates (lines = nodes, columns = coordinates)
         % [  coordinate_X1, coordinate_Y1, coordinate_Z1,
         %    coordinate_X2, coordinate_Y2, coordinate_Z2,
@@ -59,29 +62,97 @@ classdef Mesh
     %% Methods
     methods
         
-        %% Constructor
+        %% Read mesh
         function mesh = Mesh(example)
             
-            % Read mesh 'example.dat'
-            [mesh.coordinates, mesh.incidence,...
-                mesh.dirichlet_boundary, mesh.neumann_boundary] = ReadMesh(example);
+            % If there is a mesh input
+            if (nargin > 0)
+                
+                % Read mesh 'example.dat', exporte from APDL
+                [mesh.coordinates, mesh.incidence,...
+                    mesh.dirichlet_boundary, mesh.neumann_boundary] = ReadMesh(example);
+
+                disp(['         Number of nodes:    ', sprintf('%10i',size(mesh.coordinates,1))])
+                disp(['         Number of elements: ', sprintf('%10i',size(mesh.incidence,1))])
+
+                % Compute elements centroids
+                mesh.centroids = ComputeCentroids(mesh);
+
+                % Build nodal connectivity
+                mesh.nodal_connectivity = BuildNodalConnectivity(mesh);
+
+                % Find and store element neighbours
+                mesh.element_neighbours = FindElementNeighbours(mesh);
+                
+                % Building plot_matrix
+                mesh.plot_matrix = BuildPlotMatrix(mesh);
+            
+            end
+            
+        end % end Constructor
+        
+        %% Generate 2D quadrilateral structured grid for Quad4 finite elements
+        function mesh = GenerateQuad4RectangleMesh (mesh)
+
+            % Mesh discretization
+            nelx = mesh.nelx;
+            nely = mesh.nely;
+            
+            % Number of nodes and elements.
+            nnode = (nelx+1)*(nely+1);
+            nelem = nelx*nely;
+
+            % Computing coordinates increment.
+            incx = mesh.Lx/nelx;
+            incy = mesh.Ly/nely;
+
+            % Resize coordinates.
+            mesh.coordinates = zeros(nnode,3);
+
+            % Generate coordinates.
+            aux = 0; % auxiliary counter.
+            for j = 0:nely
+                for i = 0:nelx
+                    aux = aux + 1;
+                    mesh.coordinates(aux,1) = i*incx;
+                    mesh.coordinates(aux,2) = j*incy; 
+                end
+            end
+
+            % Resize incidence and centroids.
+            mesh.incidence = zeros(nelem,5);
+            mesh.incidence(:,1) = ones(nelem,1);
+            mesh.centroids = zeros(nelem,2);
+
+            % Generate elements incidence (connectivity).
+            aux = 0; % auxiliary counter.
+            for j = 0:(nely-1)
+                for i = 0:(nelx-1)
+                    aux = aux + 1;
+                    % Incidence.
+                    mesh.incidence(aux,2) = j*(nelx+1)+i+1;
+                    mesh.incidence(aux,3) = j*(nelx+1)+i+2;
+                    mesh.incidence(aux,4) = (j+1)*(nelx+1)+i+2;
+                    mesh.incidence(aux,5) = (j+1)*(nelx+1)+i+1;
+                    % Centroids.
+                    mesh.centroids(aux,1) = (mesh.coordinates(mesh.incidence(aux,3),1)+mesh.coordinates(mesh.incidence(aux,2),1))/2;
+                    mesh.centroids(aux,2) = (mesh.coordinates(mesh.incidence(aux,4),2)+mesh.coordinates(mesh.incidence(aux,3),2))/2;
+                end
+            end
             
             disp(['         Number of nodes:    ', sprintf('%10i',size(mesh.coordinates,1))])
             disp(['         Number of elements: ', sprintf('%10i',size(mesh.incidence,1))])
             
-            % Compute elements centroids
-            mesh.centroids = ComputeCentroids(mesh);
-            
             % Build nodal connectivity
             mesh.nodal_connectivity = BuildNodalConnectivity(mesh);
-            
+
             % Find and store element neighbours
             mesh.element_neighbours = FindElementNeighbours(mesh);
             
             % Building plot_matrix
             mesh.plot_matrix = BuildPlotMatrix(mesh);
-            
-        end % end Constructor
+                
+        end % GenerateQuad4RectangleMesh
         
         %% Compute elements centroids
         function centroids = ComputeCentroids(mesh)
@@ -167,7 +238,6 @@ classdef Mesh
 
                     for k = 2:5  % (k = node's connectivity)
 
-                        %Se a conectividade de do nó j é diferente de i e de 0 e o elemento i existe
                         if ((mesh.nodal_connectivity(node,k) ~= i) && (mesh.nodal_connectivity(node,k) ~= 0));
 
                             % Shared nodes counter
@@ -243,6 +313,90 @@ classdef Mesh
             end
             
         end % end BuildPlotMatrix
+        
+        %% Add Dirichlet boundary conditions
+        function mesh = AddDirichletBC(mesh, dirichlet)
+
+            % Total number of nodes.
+            nnode = size(mesh.coordinates,1);
+            if (nnode == 0)
+                disp('There are no nodes in the mesh!.')
+            end
+            
+            % Total number of current added dirichlet BC's.
+            n_bc = size(mesh.dirichlet_boundary,1);
+
+            % Verify every node in the mesh to find the ones inside the box defined by the input points.
+            for i = 1:nnode
+
+                % Checking if node coordinates are outside the box defined by the input points.
+                aux_node_inside_box = true;
+                for j = 1:length(dirichlet.point_1)
+                    if ((mesh.coordinates(i,j) < dirichlet.point_1(j)) || (mesh.coordinates(i,j) > dirichlet.point_2(j)))
+                        aux_node_inside_box = false;
+                    end
+                end
+                
+                % If node is inside the box.
+                if (aux_node_inside_box)
+
+                    % Store node, dofs and values.
+                    for j = 1:length(dirichlet.dofs)
+                        
+                        % Update number of added BC's.
+                        n_bc = n_bc + 1;
+                        
+                        % Add BC's.
+                        mesh.dirichlet_boundary(n_bc,1) = i; % node index.
+                        mesh.dirichlet_boundary(n_bc,2) = dirichlet.dofs(j); % dof index.
+                        mesh.dirichlet_boundary(n_bc,3) = dirichlet.value; % BC value.
+                    end
+                end
+            end
+            
+        end % end AddDirichletBC
+        
+        %% Add Neumann boundary conditions
+        function mesh = AddNeumannBC(mesh, neumann)
+
+            % Total number of nodes.
+            nnode = size(mesh.coordinates,1);
+            if (nnode == 0)
+                disp('There are no nodes in the mesh!.')
+            end
+            
+            % Total number of current added dirichlet BC's.
+            n_bc = size(mesh.neumann_boundary,1);
+
+            % Verify every node in the mesh to find the ones inside the box defined by the input points.
+            for i = 1:nnode
+
+                % Checking if node coordinates are outside the box defined by the input points.
+                aux_node_inside_box = true;
+                for j = 1:length(neumann.point_1)
+                    if ((mesh.coordinates(i,j) < neumann.point_1(j)) || (mesh.coordinates(i,j) > neumann.point_2(j)))
+                        aux_node_inside_box = false;
+                    end
+                end
+                
+                % If node is inside the box.
+                if (aux_node_inside_box)
+
+                    % Store node, dofs and values.
+                    for j = 1:length(neumann.dofs)
+                        
+                        % Update number of added BC's.
+                        n_bc = n_bc + 1;
+                        
+                        % Add BC's.
+                        mesh.neumann_boundary(n_bc,1) = i; % node index.
+                        mesh.neumann_boundary(n_bc,2) = neumann.dofs(j); % dof index.
+                        mesh.neumann_boundary(n_bc,3) = neumann.value; % BC value.
+                    end
+                end
+            end
+            
+        end % end AddNeumannBC
     
     end % end methods
 end

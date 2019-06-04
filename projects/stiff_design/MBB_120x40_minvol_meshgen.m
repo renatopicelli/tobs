@@ -10,7 +10,7 @@
 
 % 03.06.2019
 
-function MBB_120x40_minvol
+function MBB_120x40_minvol_meshgen
 
 close all; clear all; clc
 
@@ -44,8 +44,35 @@ tau = 0.001;                      % Convergence tolerance
 %                         ** Problem set up **                            %
 %-------------------------------------------------------------------------%
 
-% Set up mesh.
-mesh = Mesh('MBB_120x40_120x40ele');
+% Set up mesh. Mesh() means no input mesh will be read.
+mesh = Mesh();
+
+% Set up discretization size.
+mesh.Lx = 120.0;
+mesh.Ly = 40.0;
+mesh.nelx = 120;
+mesh.nely = 40;
+% Generate regular quadrilateral grid.
+mesh = GenerateQuad4RectangleMesh(mesh);
+
+% Add Dirichlet boundary conditions
+dirichlet.point_1 = [-0.001, -0.001];
+dirichlet.point_2 = [0.001, mesh.Ly*1.001];
+dirichlet.dofs = [1];
+dirichlet.value = 0;
+mesh = AddDirichletBC(mesh,dirichlet);
+dirichlet.point_1 = [0.999*mesh.Lx, -0.001];
+dirichlet.point_2 = [1.001*mesh.Lx, 0.001];
+dirichlet.dofs = [2];
+dirichlet.value = 0;
+mesh = AddDirichletBC(mesh,dirichlet);
+
+% Add Neumann boundary conditions
+neumann.point_1 = [-0.001, -0.001];
+neumann.point_2 = [0.001, 0.001];
+neumann.dofs = [2];
+neumann.value = -1;
+mesh = AddNeumannBC(mesh,neumann);
 
 % Prepare FEA
 fea = FEA(mesh);
@@ -83,7 +110,7 @@ tobs.constraints_sensitivities = ComputeComplianceSensitivities(fea,tobs.design_
 % Filtering sensitivities
 tobs.constraints_sensitivities = fea.H*tobs.constraints_sensitivities;
 
-% PlotScalarPerElement(fea,tobs.objective_sensitivities,1/5);
+% PlotScalarPerElement(fea,tobs.constraints_sensitivities,1/5);
 
 % Storing sensitivities for the next iteration averaging
 sensitivities_previous = tobs.constraints_sensitivities;
