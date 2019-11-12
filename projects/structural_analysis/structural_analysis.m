@@ -10,7 +10,7 @@ function structural_analysis
 
 close all; clear all; clc
 
-addpath(genpath('..\..\FEA'))
+addpath(genpath(strcat('..', filesep, '..', filesep, 'FEA')))
 
 disp(' ')
 disp('         ***************')
