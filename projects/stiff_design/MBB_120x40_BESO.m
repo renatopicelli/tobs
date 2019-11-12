@@ -13,9 +13,9 @@ function MBB_120x40_BESO
 
 close all; clear all; clc
 
-addpath(genpath('..\..\FEA'))
-addpath(genpath('..\..\Meshes'))
-addpath(genpath('..\..\TopOpt'))
+addpath(genpath(strcat('..', filesep, '..', filesep, 'FEA')))
+addpath(genpath(strcat('..', filesep, '..', filesep, 'Meshes'))
+addpath(genpath(strcat('..', filesep, '..', filesep, 'TopOpt'))
 
 disp(' ')
 disp('         *****************************')
@@ -105,10 +105,10 @@ is_converged = 0;
 difference = 1;
 
 while (is_converged == 0)
-    
+
     % Iteration counter update
     loop = loop + 1;
-    
+
     % Solve with BESO design update scheme
     beso = BESODesignUpdate(beso);
 
@@ -117,13 +117,13 @@ while (is_converged == 0)
     densities(densities == 0) = rho_min;
     fea = AssembleStructuralK(fea,densities);
     fea = SolveStaticStructuralFEA(fea);
-    
+
     % Objective and sensitivites
     beso.objective = fea.F'*fea.U;
     beso.objective_sensitivities = ComputeComplianceSensitivities(fea,beso.design_variables);
     % Filtering sensitivities
     beso.objective_sensitivities = fea.H*beso.objective_sensitivities;
-    
+
     % Evaluating average of alpha history
     beso.objective_sensitivities = (beso.objective_sensitivities+sensitivities_previous)/2;
     % Storing alphaKminus1 for next iteration
@@ -135,7 +135,7 @@ while (is_converged == 0)
     % Storing optimization history
     beso.history(loop+1,1) = beso.objective;
     beso.history(loop+1,2) = beso.volume_fraction;
-    
+
     % Convergence analysis [Huang and Xie, 2007]
     N = 5;
     if (loop >= 2*N) % Analyzing 2*N consecutive iterations
@@ -152,12 +152,12 @@ while (is_converged == 0)
             is_converged = 1;
         end
     end
-    
+
 %     % Saving iteration results
 %     directory = strcat('Results/iter',num2str(loop));
 %     history = tobs.history;
 %     save(directory,'densities','history');
-    
+
     % Print results
     disp([' It.: ' sprintf('%3i',loop) '  Obj.: ' sprintf('%5.4f',full(beso.objective))...
         '  Vol.: ' sprintf('%3.3f',beso.volume_fraction)...
@@ -165,7 +165,7 @@ while (is_converged == 0)
 
     % Plot densities
     PlotScalarPerElement(fea,-beso.design_variables,1); colormap(gray); pause(1e-6)
-    
+
     % Stop at maximum iterations
     if (loop == 300)
         break

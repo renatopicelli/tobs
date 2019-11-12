@@ -14,9 +14,9 @@ function MBB_120x40_minvol_meshgen
 
 close all; clear all; clc
 
-addpath(genpath('../../FEA'))
-addpath(genpath('../../Meshes'))
-addpath(genpath('../../TopOpt'))
+addpath(genpath(strcat('..', filesep, '..', filesep, 'FEA')))
+addpath(genpath(strcat('..', filesep, '..', filesep, 'Meshes'))
+addpath(genpath(strcat('..', filesep, '..', filesep, 'TopOpt'))
 
 disp(' ')
 disp('         *****************************')
@@ -134,10 +134,10 @@ is_converged = 0;
 difference = 1;
 
 while (is_converged == 0)
-    
+
     % Iteration counter update
     loop = loop + 1;
-    
+
     % Solve with ILP
     tobs = SolveWithILP(tobs);
 
@@ -146,26 +146,26 @@ while (is_converged == 0)
     densities(densities == 0) = rho_min;
     fea = AssembleStructuralK(fea,densities);
     fea = SolveStaticStructuralFEA(fea);
-    
+
     % Objective (volume) and sensitivites
     tobs.objective = mean(tobs.design_variables);
     tobs.objective_sensitivities = ones(size(fea.mesh.incidence,1),1)/size(fea.mesh.incidence,1);
-    
+
     % Constraint (compliance) and sensitivities
     tobs.constraints = fea.F'*fea.U;
     tobs.constraints_sensitivities = ComputeComplianceSensitivities(fea,tobs.design_variables);
     % Filtering sensitivities
     tobs.constraints_sensitivities = fea.H*tobs.constraints_sensitivities;
-    
+
     % Stabilization technique (average of the sensitivities history)
     tobs.constraints_sensitivities = (tobs.constraints_sensitivities+sensitivities_previous)/2;
     % Storing sensitivities for next iteration
     sensitivities_previous = tobs.constraints_sensitivities;
-    
+
     % Storing optimization history
     tobs.history(loop+1,1) = tobs.objective;
     tobs.history(loop+1,2) = tobs.constraints;
-    
+
     % Convergence analysis [Huang and Xie, 2007]
     N = 5;
     if (loop >= 2*N) % Analyzing 2*N consecutive iterations
@@ -182,20 +182,20 @@ while (is_converged == 0)
             is_converged = 1;
         end
     end
-    
+
 %     % Saving iteration results
 %     directory = strcat('Results/iter',num2str(loop));
 %     history = tobs.history;
 %     save(directory,'densities','history');
-    
+
     % Print optimization status on the screen
     disp([' It.: ' sprintf('%3i',loop) '  Obj.: ' sprintf('%5.4f',full(tobs.objective))...
         '  Comp.: ' sprintf('%3.3f',full(tobs.constraints))...
         '  Conv.: ' sprintf('%4.4f',difference)])
-    
+
     % Plot densities
     PlotScalarPerElement(fea,-tobs.design_variables,1); colormap(gray); pause(1e-6)
-    
+
     % Stop at maximum iterations
     if (loop == 300)
         break

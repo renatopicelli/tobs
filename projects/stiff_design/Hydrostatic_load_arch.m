@@ -15,9 +15,9 @@ function Hydrostatic_load_arch
 
 close all; clear all; clc
 
-addpath(genpath('../../FEA'))
-addpath(genpath('../../Meshes'))
-addpath(genpath('../../TopOpt'))
+addpath(genpath(strcat('..', filesep, '..', filesep, 'FEA')))
+addpath(genpath(strcat('..', filesep, '..', filesep, 'Meshes'))
+addpath(genpath(strcat('..', filesep, '..', filesep, 'TopOpt'))
 
 disp(' ')
 disp('         *****************************')
@@ -101,13 +101,13 @@ is_converged = 0;
 difference = 1;
 
 while (is_converged == 0)
-    
+
     % Counter update
     loop = loop + 1;
-    
+
     % Solve with ILP
     tobs = SolveWithILP(tobs);
-    
+
     % Fluid flooding process (update element types)
     fea = FluidFlooding(fea,tobs.design_variables);
 
@@ -118,21 +118,21 @@ while (is_converged == 0)
     fea = AssembleCoupledStructuralAndHydrostaticK(fea);
     % Solve coupled structural-hydrostatic analysis
     fea = SolveFEA(fea);
-    
+
     % Objective and sensitivites
     tobs.objective = mean(tobs.design_variables);
     tobs.objective_sensitivities = ones(length(fea.design_domain),1)/length(fea.design_domain);
-    
+
     % Constraints and sensitivities
     [tobs.constraints_sensitivities,tobs.constraints] = ComputeComplianceWithCoupledPressureSensitivities(fea);
     % Filtering sensitivities
     tobs.constraints_sensitivities = fea.H*tobs.constraints_sensitivities;
-    
+
     % Stabilization technique (average of the sensitivities history)
     tobs.constraints_sensitivities = (tobs.constraints_sensitivities+sensitivities_previous)/2;
     % Storing sensitivities for next iteration
     sensitivities_previous = tobs.constraints_sensitivities;
-    
+
     % Storing optimization history
     tobs.history(loop+1,1) = tobs.objective;
     tobs.history(loop+1,2) = tobs.constraints;
@@ -155,15 +155,15 @@ while (is_converged == 0)
     else
         difference = 1;
     end
-    
+
     % Print results
     disp([' It.: ' sprintf('%3i',loop) '  Obj.: ' sprintf('%5.4f',full(tobs.objective))...
         '  Comp.: ' sprintf('%3.3f',tobs.constraints)...
         '  Conv.: ' sprintf('%4.4f',difference)])
-        
+
     % Plot densities
     PlotFluidStructureTopology(fea); pause(1e-6);
-    
+
     % Stop at maximum iterations
     if (loop == 300)
         break
