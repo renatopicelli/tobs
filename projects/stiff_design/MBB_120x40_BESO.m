@@ -14,7 +14,6 @@ function MBB_120x40_BESO
 close all; clear all; clc
 
 
-disp(strcat('..', filesep, '..', filesep, 'FEA'))
 addpath(genpath(strcat('..', filesep, '..', filesep, 'FEA')))
 addpath(genpath(strcat('..', filesep, '..', filesep, 'Meshes')))
 addpath(genpath(strcat('..', filesep, '..', filesep, 'TopOpt')))
