@@ -16,8 +16,8 @@ function Hydrostatic_load_arch_meshgen
 close all; clear all; clc
 
 addpath(genpath(strcat('..', filesep, '..', filesep, 'FEA')))
-addpath(genpath(strcat('..', filesep, '..', filesep, 'Meshes'))
-addpath(genpath(strcat('..', filesep, '..', filesep, 'TopOpt'))
+addpath(genpath(strcat('..', filesep, '..', filesep, 'Meshes')))
+addpath(genpath(strcat('..', filesep, '..', filesep, 'TopOpt')))
 
 disp(' ')
 disp('         *****************************')
