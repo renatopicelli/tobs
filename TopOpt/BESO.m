@@ -3,58 +3,58 @@
 %-------------------------------------------------------------------------%
 
 classdef BESO
-    
+
     %% Properties
     properties
-        
+
         % BESO parameters
         ER
         ARmax
-        
+
         % Design variables {0,1}
         design_variables
-        
+
         % Objective and sensitivities
         objective
         objective_sensitivities
-        
+
         % Volume fraction
         volume_fraction
         final_volume_fraction
-        
+
         % Optimization history
         % [ objective, constraint ]
         history
-        
+
     end
-    
+
     %% Methods
     methods
-        
+
         %% Constructor
         function beso = BESO(final_volume_fraction_in, ER_in, ARmax_in, number_of_variables)
-            
+
             disp([' '])
             disp(['         Preparing BESO.'])
-            
+
             % Volume constraint
             beso.final_volume_fraction = final_volume_fraction_in;
-            
+
             % Optimization parameters
             beso.ER = ER_in;
             beso.ARmax = ARmax_in;
-            
+
             % Initial design variables
             beso.design_variables = ones(number_of_variables,1);
-            
+
         end % end Constructor
-        
+
         %% Function to update structural design with BESO
             function beso = BESODesignUpdate(beso)
-            
+
             % BESO sensitivity now being called alpha (negative sign for minimization)
             alpha = -beso.objective_sensitivities;
-            
+
             % Sorting objective sensitivities (alpha) in descend order
             [alpha,In] = sort(alpha,1,'descend');
 
@@ -62,16 +62,16 @@ classdef BESO
             % If current volume is higher than final volume
             if (beso.volume_fraction-beso.final_volume_fraction > beso.ER)
                 target_volume = beso.volume_fraction*(1-beso.ER);
-                
+
             % Elseif current volume is lower than final volume
             elseif (beso.volume_fraction-beso.final_volume_fraction < -beso.ER)
                 target_volume = beso.volume_fraction*(1+beso.ER);
-                
+
             % If current volume approached final volume
             elseif (beso.volume_fraction-beso.final_volume_fraction >= -beso.ER) && (beso.volume_fraction-beso.final_volume_fraction <= beso.ER)
                 target_volume = beso.final_volume_fraction;
             end
-            
+
             % Number of removal element threshold
             nath = round(target_volume*length(alpha));
             % Adjusting for even number of removed elements
@@ -87,7 +87,7 @@ classdef BESO
 
             % Computing current ratio of admission
             ARi = nadd/length(alpha);
-            
+
             % If admission ratio is feasible
             if (ARi <= beso.ARmax)
 
@@ -159,8 +159,8 @@ classdef BESO
                 end
 
             end
-            
+
         end % end BESODesignUpdate
-    
+
     end % end methods
 end

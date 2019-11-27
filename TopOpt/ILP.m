@@ -7,9 +7,9 @@ classdef ILP < Optimization
         VariableLimits; % Bounds on Design Variables
         FlipLimits; % Limits vector for flipping the variables
     end
-    
+
     methods
-    
+
         function self = ILP (epsilons, Limits, Values, DesignVariables, FlipLimits, Optimize)
             if (nargin < 6)
                 Optimize = 'Minimize';
@@ -21,7 +21,7 @@ classdef ILP < Optimization
 %             self.RelaxedLimits = RelaxConstraints (self);
             self.VariableLimits = GetVariableLimits (self);
         end
-        
+
         function Limits = RelaxConstraints (self)
             Targets = self.Limits - self.Values;
             Limits = Targets;
@@ -34,7 +34,7 @@ classdef ILP < Optimization
                 end
             end
         end
-        
+
         function [Limits, Sensitivities, Obj] = NormalizationRelax (self, Sensitivities, Obj)
             nD = size(Sensitivities, 1);
             Norms = max(max(abs(Sensitivities)), eps);
@@ -49,13 +49,13 @@ classdef ILP < Optimization
 %             Limits = (A + B) .* AllowedChanges + (1 - (A + B)) .* NormedTargets;
 %             Sensitivities(:,B) = -Sensitivities(:,B);
         end
-        
+
         function VarLimits = GetVariableLimits (self)
             VarLimits = zeros(self.nDesignVariables, 2);
             VarLimits(:, 1) = -1.0 * (abs(self.DesignVariables - 1) < 0.001);
             VarLimits(:, 2) = 1.0 * (abs(self.DesignVariables) < 0.001);
         end
-        
+
         function UpdatedVariables = Optimize (self, ObjCoeff, ConstCoeff, options)
             [self.RelaxedLimits, ConstCoeff, ObjCoeff] = NormalizationRelax (self, ConstCoeff, ObjCoeff);
             exitflag = 0;
@@ -137,7 +137,7 @@ classdef ILP < Optimization
                              flip(CC(1:Xend, 1:Yend, Zend+1:self.Elements(3)), 3) + ...
                              flip(fliplr(CC(1:Xend, Yend+1:self.Elements(2), Zend+1:self.Elements(3))), 3) + ...
                              flip(flipud(CC(Xend+1:self.Elements(1), 1:Yend, Zend+1:self.Elements(3))), 3) + ...
-                             flip(rot90(CC(Xend+1:self.Elements(1), Yend+1:self.Elements(2), Zend+1:self.Elements(3)), 2), 3); 
+                             flip(rot90(CC(Xend+1:self.Elements(1), Yend+1:self.Elements(2), Zend+1:self.Elements(3)), 2), 3);
                         C(:, ind) = CC(:);
                     end
                     ConstCoeff = C;
@@ -181,9 +181,9 @@ classdef ILP < Optimization
             ConstCoeff = [ConstCoeff'; Trun'];
             while (exitflag ~= 1)
                 if (strcmpi('intlinprog', Optimizer))
-                    OptimizerOptions = optimoptions('intlinprog', 'CutGeneration', 'intermediate', 'RootLPAlgorithm','primal-simplex', ...
-                                                    'NodeSelection', 'mininfeas', 'HeuristicsMaxNodes', 100, 'RootLPMaxIter', 60000, ...
-                                                    'MaxNodes', 1e5);
+                    % OptimizerOptions = optimoptions('intlinprog', 'CutGeneration', 'intermediate', 'RootLPAlgorithm','primal-simplex', ...
+                      %                               'NodeSelection', 'mininfeas', 'HeuristicsMaxNodes', 100, 'RootLPMaxIter', 60000, ...
+                      %                               'MaxNodes', 1e5);
 %                     ScaleObj = max(abs(ObjCoeff));
 %                     ObjCoeff = ObjCoeff/ScaleObj;
 %                     ScaleCons = max(abs(ConstCoeff), [], 2);
@@ -194,9 +194,26 @@ classdef ILP < Optimization
 %                     end
                     [x, ObjValue, exitflag, output] = intlinprog (ObjCoeff, 1:nDesignVariables, ...
                                                       ConstCoeff, self.RelaxedLimits, [], [], ...
-                                                      LowerLimits, UpperLimits, ...
-                                                      OptimizerOptions);
+                                                      LowerLimits, UpperLimits);%, ...
+                                                      %OptimizerOptions);
 %                 output
+		elseif (strcmpi('glpk', Optimizer))
+                    % OptimizerOptions = optimoptions('intlinprog', 'CutGeneration', 'intermediate', 'RootLPAlgorithm','primal-simplex', ...
+                      %                               'NodeSelection', 'mininfeas', 'HeuristicsMaxNodes', 100, 'RootLPMaxIter', 60000, ...
+                      %                               'MaxNodes', 1e5);
+%                     ScaleObj = max(abs(ObjCoeff));
+%                     ObjCoeff = ObjCoeff/ScaleObj;
+%                     ScaleCons = max(abs(ConstCoeff), [], 2);
+%                     nc = size(ConstCoeff, 1);
+%                     for ind = 1:nc
+%                         ConstCoeff(ind, :) = ConstCoeff(ind, :)/ScaleCons(ind);
+%                         self.RelaxedLimits(ind) = self.RelaxedLimits(ind)/ScaleCons(ind);
+%                     end
+		    param.msglev = 1;
+		    param.itlim = 1000;
+                    [x, ObjValue, exitflag, output] = glpk(ObjCoeff, ConstCoeff, self.RelaxedLimits, LowerLimits, UpperLimits, "UU", repmat("I",[1,nDesignVariables]), 1, param );
+		    exitflag = 1
+
                 else
                     OptimizerOptions = cplexoptimset('cplex');
                     OptimizerOptions.mip.strategy.variableselect = 3; % OptimizerOptions.BranchStrategy = 'strong';
@@ -212,6 +229,7 @@ classdef ILP < Optimization
                     exitflag = 0;
                     self.RelaxedLimits = self.RelaxedLimits * 4;
                     disp('Struck ...');
+		    exit;
                 end
             end
             disp (['Optimized Objective Value from ILP = ' num2str(ObjValue, 10)]);
@@ -235,7 +253,7 @@ classdef ILP < Optimization
             end
 %             UpdatedVariables = round (self.DesignVariables + x);
         end
-        
+
     end
-    
+
 end
