@@ -2,6 +2,7 @@ from oct2py import octave
 from dolfin import *
 from dolfin_adjoint import *
 import numpy as np
+import math
 
 set_log_level(50)
 
@@ -44,7 +45,7 @@ class Optimizer(object):
 
     def __vf_fun_var_assem__(self):
         fc_xi_tst   = TestFunction(self.fc_xi.function_space())
-        self.vol_xi  = assemble(fc_xi_tst * Constant(1.5) * dx)
+        self.vol_xi  = assemble(fc_xi_tst * Constant(1.0) * dx)
         self.vol_sum = self.vol_xi.sum()
 
     def add_plot_res(self, file_out):
@@ -87,11 +88,18 @@ class Optimizer(object):
         self.__check_ds_vars__()
 
         volume_val = float( self.vol_xi.inner( self.fc_xi.vector() ) )
+        print('---------')
+        print(volume_val/self.vol_sum)
+        print('---------')
 
         return volume_val/self.vol_sum
 
     def volfrac_dfun(self, user_data=None):
-        return self.vol_xi/self.vol_sum
+        v_df = self.vol_xi/self.vol_sum
+        print('*/-*/-*/-*/')
+        print(np.array(v_df)[0])
+        print('*/-*/-*/-*/')
+        return v_df
 
     def flag_jacobian(self):
         rows = []
@@ -123,9 +131,9 @@ pasta = "output/"
 mu = Constant(1.0)                   # viscosity
 alphaunderbar = 2.5 * mu / (100**2)  # parameter for \alpha
 alphabar = 2.5 * mu / (0.01**2)      # parameter for \alpha
-alphaunderbar = 2.5 * mu *1.e-4
-alphabar = 2.5 * mu * 1e4
-q = Constant(0.01) # q value that controls difficulty/discrete-valuedness of solution
+alphaunderbar = 2.5 * mu *1.e-10
+alphabar = 2.5 * mu * 1e10
+q = Constant(1.0) # q value that controls difficulty/discrete-valuedness of solution
 
 def alpha(rho):
     """Inverse permeability as a function of rho, equation (40)"""
@@ -137,7 +145,7 @@ def alpha(rho):
 # Taylor-Hood finite element to discretise the Stokes equations
 # :cite:`taylor1973`.
 
-N = 30
+N = 40
 delta = 1.5  # The aspect ratio of the domain, 1 high and \delta wide
 V = Constant(1.0/3) * delta  # want the fluid to occupy 1/3 of the domain
 
@@ -194,8 +202,21 @@ def forward(rho):
 # volume bound; this ensures that the integral constraint and the bound
 # constraint are satisfied.
 
+class Distribution(UserExpression):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def eval_cell(self, values, x, ufc_cell):
+        #values[0] = abs(round(math.sin(2 * math.pi * x[0] * x[1]*10 /10 ) ))
+        values[0] = 1
+
+    def value_shape(self):
+        return ()
+
+
 if __name__ == "__main__":
-    rho = interpolate(Constant(1.0), A)
+    rho = interpolate(Distribution(), A)
+    rho.rename("control", "")
     w_resp   = forward(rho)
     (u, p) = w_resp.split()
 
@@ -206,6 +227,7 @@ if __name__ == "__main__":
     controls << rho
 
     iteration = 0
+    epsilons = [.01, .001, .001, .001]
     while True:
         J = assemble(0.5 * inner(alpha(rho) * u, u) * dx + 0.5 * mu * inner(grad(u)+grad(u).T, grad(u)) * dx)
         nvar = len(rho.vector())
@@ -221,10 +243,12 @@ if __name__ == "__main__":
         acst_U = np.array(fval.cst_U)
         j = float(fval.obj_fun(rho.vector()))
         if iteration == 0: jd_previous = np.array(fval.obj_dfun()).reshape((-1,1))
+        # jd = np.array(fval.obj_dfun()).reshape((-1,1))
         jd = (np.array(fval.obj_dfun()).reshape((-1,1)) + jd_previous)/2 #stabilization
         cs = fval.cst_fval()
         jac = np.array(fval.jacobian()).reshape((-1,1))
-        design_variables = octave.stokes2(nvar,
+        design_variables = octave.stokes2(
+                nvar,
                 x_L,
                 x_U,
                 fval.cst_num,
@@ -234,14 +258,36 @@ if __name__ == "__main__":
                 jd,
                 cs,
                 jac,
-                iteration)
-        rho.vector().set_local(design_variables)
+                iteration,
+                epsilons[iteration],
+                np.array(rho.vector())
+                )
+        '''bruno = octave.stokes2(
+                nvar,
+                x_L,
+                x_U,
+                fval.cst_num,
+                acst_L,
+                acst_U,
+                j,
+                jd,
+                cs,
+                jac,
+                iteration,
+                epsilons,
+                np.array(rho.vector())
+                )
+        import pdb; pdb.set_trace()'''
+
+        rho = interpolate(Constant(0.0), A)
+        rho.rename("control", "")
+        rho.vector().add_local(design_variables)
         controls << rho
         w_resp   = forward(rho)
         (u, p) = w_resp.split()
         u.rename("Velocidade", "")
         state_file << u
-        if iteration == 30:
+        if iteration == 70:
             break
         else: iteration += 1
         jd_previous = jd

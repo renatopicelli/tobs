@@ -6,6 +6,14 @@ classdef ILP < Optimization
         RelaxedLimits;  % Upper Bounds on Constraints after relaxation
         VariableLimits; % Bounds on Design Variables
         FlipLimits; % Limits vector for flipping the variables
+	PythonObjCoeff;
+	PythonConstCoeff;
+	PythonRelaxedLimits;
+	PythonLowerLimits;
+	PythonUpperLimits;
+	PythonnDesignVariables;
+	PythonOptimizerOptions;
+
     end
 
     methods
@@ -181,9 +189,9 @@ classdef ILP < Optimization
             ConstCoeff = [ConstCoeff'; Trun'];
             while (exitflag ~= 1)
                 if (strcmpi('intlinprog', Optimizer))
-                    % OptimizerOptions = optimoptions('intlinprog', 'CutGeneration', 'intermediate', 'RootLPAlgorithm','primal-simplex', ...
-                      %                               'NodeSelection', 'mininfeas', 'HeuristicsMaxNodes', 100, 'RootLPMaxIter', 60000, ...
-                      %                               'MaxNodes', 1e5);
+                     OptimizerOptions = optimoptions('intlinprog', 'CutGeneration', 'intermediate', 'RootLPAlgorithm','primal-simplex', ...
+                                                     'NodeSelection', 'mininfeas', 'HeuristicsMaxNodes', 100, 'RootLPMaxIter', 60000, ...
+                                                     'MaxNodes', 1e5);
 %                     ScaleObj = max(abs(ObjCoeff));
 %                     ObjCoeff = ObjCoeff/ScaleObj;
 %                     ScaleCons = max(abs(ConstCoeff), [], 2);
@@ -194,8 +202,8 @@ classdef ILP < Optimization
 %                     end
                     [x, ObjValue, exitflag, output] = intlinprog (ObjCoeff, 1:nDesignVariables, ...
                                                       ConstCoeff, self.RelaxedLimits, [], [], ...
-                                                      LowerLimits, UpperLimits);%, ...
-                                                      %OptimizerOptions);
+                                                      LowerLimits, UpperLimits, ...
+                                                      OptimizerOptions);
 %                 output
 		elseif (strcmpi('glpk', Optimizer))
                     % OptimizerOptions = optimoptions('intlinprog', 'CutGeneration', 'intermediate', 'RootLPAlgorithm','primal-simplex', ...
@@ -209,10 +217,26 @@ classdef ILP < Optimization
 %                         ConstCoeff(ind, :) = ConstCoeff(ind, :)/ScaleCons(ind);
 %                         self.RelaxedLimits(ind) = self.RelaxedLimits(ind)/ScaleCons(ind);
 %                     end
-		    param.msglev = 1;
-		    param.itlim = 1000;
+		    param.msglev = 3;
+		    % param.dual = 1;
+		    % param.itlim = 100;
+		    % param.branch = 5;
+		    % param.btrack = 1
+
+		    % param.tmlim = 2000; %ms
                     [x, ObjValue, exitflag, output] = glpk(ObjCoeff, ConstCoeff, self.RelaxedLimits, LowerLimits, UpperLimits, "UU", repmat("I",[1,nDesignVariables]), 1, param );
 		    exitflag = 1
+
+		elseif (strcmpi('python_cplex', Optimizer))
+                    self.PythonObjCoeff = ObjCoeff;
+		    self.PythonConstCoeff = ConstCoeff;
+		    self.PythonRelaxedLimits = self.RelaxedLimits;
+		    self.PythonLowerLimits = LowerLimits;
+		    self.PythonUpperLimits = UpperLimits;
+		    self.PythonnDesignVariables = nDesignVariables;
+		    ObjValue = 1;
+		    exitflag = 1;
+		    x = ones(nDesignVariables,1);
 
                 else
                     OptimizerOptions = cplexoptimset('cplex');
@@ -254,6 +278,11 @@ classdef ILP < Optimization
 %             UpdatedVariables = round (self.DesignVariables + x);
         end
 
-    end
+        function value = return_values_cplex (self)
+            value = self.PythonObjCoeff;
+	    disp(value);
+        end
+
+    end % end mehtods
 
 end

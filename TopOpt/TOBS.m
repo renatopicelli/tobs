@@ -29,6 +29,14 @@ classdef TOBS
         % [ objective, constraint_1, constraint_2, ..., constraint_n ]
         history
 
+	PythonObjCoeff
+	PythonConstCoeff
+	PythonRelaxedLimits
+	PythonLowerLimits
+	PythonUpperLimits
+	PythonnDesignVariables
+	PythonOptimizerOptions
+
     end
 
     %% Methods
@@ -70,8 +78,21 @@ classdef TOBS
             % options.Optimizer = 'cplex';
             % options.Optimizer = 'intlinprog';
             options.Optimizer = 'glpk';
+            % options.Optimizer = 'python_cplex';
             COptimize = ILP (tobs.epsilons', tobs.constraints_limits', tobs.constraints', tobs.design_variables, tobs.flip_limits, 'Minimize');
             tobs.design_variables = COptimize.Optimize (tobs.objective_sensitivities, tobs.constraints_sensitivities, options);
+
+	    PythonObjCoeff = COptimize.return_values_cplex();
+
+	    disp(PythonObjCoeff);
+
+	    tobs.PythonObjCoeff = COptimize.PythonObjCoeff;
+	    tobs.PythonConstCoeff = COptimize.PythonConstCoeff;
+	    tobs.PythonRelaxedLimits = COptimize.PythonRelaxedLimits;
+	    tobs.PythonLowerLimits = COptimize.PythonLowerLimits;
+	    tobs.PythonUpperLimits = COptimize.PythonUpperLimits;
+	    tobs.PythonnDesignVariables = COptimize.PythonnDesignVariables;
+
 
         end % end SolveWithILP
 

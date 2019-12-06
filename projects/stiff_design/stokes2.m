@@ -10,10 +10,8 @@
 % 03.06.2019
 
 %function opt = stokes2(funobj, sensibility, design_variables, number_of_variables, current_volfrac, iteration)
-function opt = stokes2(nvar, x_L, x_U, cst_num, acst_L, acst_U, obj_fun, obj_dfun, cst_fval, jacobian, iteration)
-
-disp('ola Bruno')
-disp(nvar)
+function opt = stokes2(nvar, x_L, x_U, cst_num, acst_L, acst_U, obj_fun, obj_dfun, cst_fval, jacobian, iteration, epsilons, rho)
+%function [PythonObjCoeff, PythonConstCoeff, PythonRelaxedLimits, PythonLowerLimits, PythonUpperLimits, PythonnDesignVariables] = stokes2(nvar, x_L, x_U, cst_num, acst_L, acst_U, obj_fun, obj_dfun, cst_fval, jacobian, iteration, epsilons, rho)
 
 % close all; clear all; clc
 
@@ -38,19 +36,15 @@ disp(' ')
 % Optimization parameters
 %radius = 6;                  % Filter radius in length unit
 %rho_min = 0.001^3;           % Minimum density (for void elements)
-compliance_constraint = 190.3072; % Compliance (Nm) constraint
-compliance_constraint = 1.0e-10; % Compliance (Nm) constraint
-epsilons = 0.001;                 % Constraint relaxation parameter
-epsilons = 0.4;                 % Constraint relaxation parameter
+volume_constraint = 7.0e-1; % Compliance (Nm) constraint
 flip_limits = 0.05;               % Flip limits
-flip_limits = 10.0;               % Flip limits
 
 %% --------------------------------------------------------------------- %%
 %                         ** Problem set up **                            %
 %-------------------------------------------------------------------------%
 % Prepare TOBS
 %tobs = TOBS(compliance_constraint, epsilons, flip_limits, size(fea.mesh.incidence,1));
-tobs = TOBS(compliance_constraint, epsilons, flip_limits, nvar);
+tobs = TOBS(volume_constraint, epsilons, flip_limits, nvar);
 
 
 %% --------------------------------------------------------------------- %%
@@ -68,10 +62,8 @@ loop = 0;
 % Objective (compliance) and sensitivites
 %beso.objective = fea.F'*fea.U;
 %beso.objective_sensitivities = ComputeComplianceSensitivities(fea,beso.design_variables);
+tobs.design_variables = rho
 tobs.objective = obj_fun;
-disp('******')
-disp('aqui')
-disp('******')
 tobs.objective_sensitivities = obj_dfun;
 sensitivities_previous = tobs.objective_sensitivities;
 %tobs.history(loop+1,1) = tobs.objective;
@@ -109,6 +101,15 @@ tobs.history(loop+1,2) = tobs.constraints;
 
 % Finite Element analysis
 opt = tobs.design_variables;
+%opt =  [tobs.PythonObjCoeff, tobs.PythonConstCoeff, tobs.PythonRelaxedLimits, tobs.PythonLowerLimits, tobs.PythonUpperLimits, tobs.PythonnDesignVariables];
+
+% disp(tobs.PythonObjCoeff);
+% PythonObjCoeff = tobs.PythonObjCoeff;
+% PythonConstCoeff = tobs.PythonConstCoeff;
+% PythonRelaxedLimits = tobs.PythonRelaxedLimits;
+% PythonLowerLimits = tobs.PythonLowerLimits;
+% PythonUpperLimits = tobs.PythonUpperLimits;
+% PythonnDesignVariables = tobs.PythonnDesignVariables;
 
 disp(' ')
 disp('         ***************************')
