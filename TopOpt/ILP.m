@@ -6,13 +6,6 @@ classdef ILP < Optimization
         RelaxedLimits;  % Upper Bounds on Constraints after relaxation
         VariableLimits; % Bounds on Design Variables
         FlipLimits; % Limits vector for flipping the variables
-	PythonObjCoeff;
-	PythonConstCoeff;
-	PythonRelaxedLimits;
-	PythonLowerLimits;
-	PythonUpperLimits;
-	PythonnDesignVariables;
-	PythonOptimizerOptions;
 
     end
 
@@ -64,7 +57,9 @@ classdef ILP < Optimization
             VarLimits(:, 2) = 1.0 * (abs(self.DesignVariables) < 0.001);
         end
 
-        function UpdatedVariables = Optimize (self, ObjCoeff, ConstCoeff, options)
+        function [UpdatedVariables, PythonObjCoeff, ...
+		    PythonConstCoeff, PythonRelaxedLimits, ...
+		    PythonLowerLimits, PythonUpperLimits, PythonnDesignVariables] = Optimize (self, ObjCoeff, ConstCoeff, options)
             [self.RelaxedLimits, ConstCoeff, ObjCoeff] = NormalizationRelax (self, ConstCoeff, ObjCoeff);
             exitflag = 0;
             if (~self.isMinimize)
@@ -217,7 +212,8 @@ classdef ILP < Optimization
 %                         ConstCoeff(ind, :) = ConstCoeff(ind, :)/ScaleCons(ind);
 %                         self.RelaxedLimits(ind) = self.RelaxedLimits(ind)/ScaleCons(ind);
 %                     end
-		    param.msglev = 3;
+		    param.msglev = 1;
+		    param.btrack = 1;
 		    % param.dual = 1;
 		    % param.itlim = 100;
 		    % param.branch = 5;
@@ -228,12 +224,12 @@ classdef ILP < Optimization
 		    exitflag = 1
 
 		elseif (strcmpi('python_cplex', Optimizer))
-                    self.PythonObjCoeff = ObjCoeff;
-		    self.PythonConstCoeff = ConstCoeff;
-		    self.PythonRelaxedLimits = self.RelaxedLimits;
-		    self.PythonLowerLimits = LowerLimits;
-		    self.PythonUpperLimits = UpperLimits;
-		    self.PythonnDesignVariables = nDesignVariables;
+                    PythonObjCoeff = ObjCoeff;
+		    PythonConstCoeff = ConstCoeff;
+		    PythonRelaxedLimits = self.RelaxedLimits;
+		    PythonLowerLimits = LowerLimits;
+		    PythonUpperLimits = UpperLimits;
+		    PythonnDesignVariables = nDesignVariables;
 		    ObjValue = 1;
 		    exitflag = 1;
 		    x = ones(nDesignVariables,1);
@@ -276,11 +272,6 @@ classdef ILP < Optimization
                 end
             end
 %             UpdatedVariables = round (self.DesignVariables + x);
-        end
-
-        function value = return_values_cplex (self)
-            value = self.PythonObjCoeff;
-	    disp(value);
         end
 
     end % end mehtods

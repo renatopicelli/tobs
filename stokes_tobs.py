@@ -2,7 +2,9 @@ from oct2py import octave
 from dolfin import *
 from dolfin_adjoint import *
 import numpy as np
-import math
+
+import cplex
+from cplex.exceptions import CplexError
 
 set_log_level(50)
 
@@ -125,8 +127,6 @@ class Optimizer(object):
 octave.addpath('~')
 parameters["std_out_all_processes"] = False
 pasta = "output/"
-# Next we define some constants, and define the inverse permeability as
-# a function of :math:`\rho`.
 
 mu = Constant(1.0)                   # viscosity
 alphaunderbar = 2.5 * mu / (100**2)  # parameter for \alpha
@@ -138,12 +138,6 @@ q = Constant(1.0) # q value that controls difficulty/discrete-valuedness of solu
 def alpha(rho):
     """Inverse permeability as a function of rho, equation (40)"""
     return alphabar + (alphaunderbar - alphabar) * rho * (1 + q) / (rho + q)
-
-# Next we define the mesh (a rectangle 1 high and :math:`\delta` wide)
-# and the function spaces to be used for the control :math:`\rho`, the
-# velocity :math:`u` and the pressure :math:`p`. Here we will use the
-# Taylor-Hood finite element to discretise the Stokes equations
-# :cite:`taylor1973`.
 
 N = 40
 delta = 1.5  # The aspect ratio of the domain, 1 high and \delta wide
@@ -176,13 +170,6 @@ class InflowOutflow(UserExpression):
     def value_shape(self):
         return (2,)
 
-# Next we define a function that given a control :math:`\rho` solves the
-# forward PDE for velocity and pressure :math:`(u, p)`. (The advantage
-# of formulating it in this manner is that it makes it easy to conduct
-# :doc:`Taylor remainder convergence tests
-# <../../documentation/verification>`.)
-
-
 def forward(rho):
     """Solve the forward problem for a given fluid distribution rho(x)."""
     w_resp = Function(W)
@@ -196,22 +183,31 @@ def forward(rho):
 
     return w_resp
 
-# Now we define the ``__main__`` section. We define the initial guess
-# for the control and use it to solve the forward PDE. In order to
-# ensure feasibility of the initial control guess, we interpolate the
-# volume bound; this ensures that the integral constraint and the bound
-# constraint are satisfied.
-
 class Distribution(UserExpression):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
     def eval_cell(self, values, x, ufc_cell):
-        #values[0] = abs(round(math.sin(2 * math.pi * x[0] * x[1]*10 /10 ) ))
         values[0] = 1
 
     def value_shape(self):
         return ()
+
+def cplex_optimize(prob, nvar, my_obj, my_constcoef, my_rlimits, my_ll, my_ul):
+    prob.objective.set_sense(prob.objective.sense.minimize)
+
+    my_ctype = "I"*nvar
+    my_colnames = ["x"+str(item) for item in range(nvar)]
+    my_sense = ["L", "G"]
+    my_rownames = ["r1", "r2"]
+
+    prob.variables.add(obj=my_obj, lb=my_ll, ub=my_ul, types=my_ctype,
+                       names=my_colnames)
+
+    rows = [cplex.SparsePair(ind=["x"+str(item) for item in range(nvar)], val = my_constcoef[0]),
+            cplex.SparsePair(ind=["x"+str(item) for item in range(nvar)], val = my_constcoef[1])]
+
+    prob.linear_constraints.add(lin_expr=rows, senses=my_sense, rhs=my_rlimits, names=my_rownames)
 
 
 if __name__ == "__main__":
@@ -227,9 +223,10 @@ if __name__ == "__main__":
     controls << rho
 
     iteration = 0
-    epsilons = [.01, .001, .001, .001]
+    epsilons = .2
+
     while True:
-        J = assemble(0.5 * inner(alpha(rho) * u, u) * dx + 0.5 * mu * inner(grad(u)+grad(u).T, grad(u)) * dx)
+        J = assemble(0.5 * inner(alpha(rho) * u, u) * dx + mu * inner(grad(u), grad(u)) * dx)
         nvar = len(rho.vector())
 
         fval = Optimizer(rho)
@@ -243,26 +240,10 @@ if __name__ == "__main__":
         acst_U = np.array(fval.cst_U)
         j = float(fval.obj_fun(rho.vector()))
         if iteration == 0: jd_previous = np.array(fval.obj_dfun()).reshape((-1,1))
-        # jd = np.array(fval.obj_dfun()).reshape((-1,1))
         jd = (np.array(fval.obj_dfun()).reshape((-1,1)) + jd_previous)/2 #stabilization
         cs = fval.cst_fval()
         jac = np.array(fval.jacobian()).reshape((-1,1))
-        design_variables = octave.stokes2(
-                nvar,
-                x_L,
-                x_U,
-                fval.cst_num,
-                acst_L,
-                acst_U,
-                j,
-                jd,
-                cs,
-                jac,
-                iteration,
-                epsilons[iteration],
-                np.array(rho.vector())
-                )
-        '''bruno = octave.stokes2(
+        ans = octave.stokes(
                 nvar,
                 x_L,
                 x_U,
@@ -277,18 +258,34 @@ if __name__ == "__main__":
                 epsilons,
                 np.array(rho.vector())
                 )
-        import pdb; pdb.set_trace()'''
+        PythonObjCoeff = ans[0][1] #because [0][0] is the design variable
+        PythonConstCoeff = ans[0][2]
+        PythonRelaxedLimits = ans[0][3]
+        PythonLowerLimits = ans[0][4]
+        PythonUpperLimits = ans[0][5]
+        PythonnDesignVariables = ans[0][6]
+        my_prob = cplex.Cplex()
+        coef = [item[0] for item in PythonObjCoeff.tolist()]
+        constcoef = PythonConstCoeff.tolist()
+        rlimits = [item[0] for item in PythonRelaxedLimits.tolist()]
+        ll = [item[0] for item in PythonLowerLimits.tolist()]
+        ul = [item[0] for item in PythonUpperLimits.tolist()]
+        cplex_optimize(my_prob, nvar, coef, constcoef, rlimits, ll, ul)
 
-        rho = interpolate(Constant(0.0), A)
+        my_prob.solve()
+        design_variables = my_prob.solution.get_values()
+
         rho.rename("control", "")
-        rho.vector().add_local(design_variables)
+        rho.vector().add_local(np.array(design_variables))
         controls << rho
+
         w_resp   = forward(rho)
         (u, p) = w_resp.split()
         u.rename("Velocidade", "")
         state_file << u
-        if iteration == 70:
+        if iteration == 700:
             break
         else: iteration += 1
         jd_previous = jd
+        del my_prob
 

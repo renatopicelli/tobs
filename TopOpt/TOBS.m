@@ -29,14 +29,6 @@ classdef TOBS
         % [ objective, constraint_1, constraint_2, ..., constraint_n ]
         history
 
-	PythonObjCoeff
-	PythonConstCoeff
-	PythonRelaxedLimits
-	PythonLowerLimits
-	PythonUpperLimits
-	PythonnDesignVariables
-	PythonOptimizerOptions
-
     end
 
     %% Methods
@@ -64,7 +56,9 @@ classdef TOBS
         end % end Constructor
 
         %% Function to solve optimization problem with ILP
-            function tobs = SolveWithILP(tobs)
+            function [tobs, PythonObjCoeff, ...
+		    PythonConstCoeff, PythonRelaxedLimits, ...
+		    PythonLowerLimits, PythonUpperLimits, PythonnDesignVariables] = SolveWithILP(tobs)
 
             % Add CPLEX library.
 %             addpath('C:\Program Files\IBM\ILOG\CPLEX_Studio1271\cplex\matlab\x64_win64');
@@ -77,22 +71,14 @@ classdef TOBS
             options.Symmetry = tobs.symmetry;
             % options.Optimizer = 'cplex';
             % options.Optimizer = 'intlinprog';
-            options.Optimizer = 'glpk';
-            % options.Optimizer = 'python_cplex';
+            % options.Optimizer = 'glpk';
+            options.Optimizer = 'python_cplex';
             COptimize = ILP (tobs.epsilons', tobs.constraints_limits', tobs.constraints', tobs.design_variables, tobs.flip_limits, 'Minimize');
-            tobs.design_variables = COptimize.Optimize (tobs.objective_sensitivities, tobs.constraints_sensitivities, options);
+            [tobs.design_variables, PythonObjCoeff, ...
+		    PythonConstCoeff, PythonRelaxedLimits, ...
+		    PythonLowerLimits, PythonUpperLimits, PythonnDesignVariables] = COptimize.Optimize (tobs.objective_sensitivities, tobs.constraints_sensitivities, options);
 
-	    PythonObjCoeff = COptimize.return_values_cplex();
-
-	    disp(PythonObjCoeff);
-
-	    tobs.PythonObjCoeff = COptimize.PythonObjCoeff;
-	    tobs.PythonConstCoeff = COptimize.PythonConstCoeff;
-	    tobs.PythonRelaxedLimits = COptimize.PythonRelaxedLimits;
-	    tobs.PythonLowerLimits = COptimize.PythonLowerLimits;
-	    tobs.PythonUpperLimits = COptimize.PythonUpperLimits;
-	    tobs.PythonnDesignVariables = COptimize.PythonnDesignVariables;
-
+	    disp('bruno')
 
         end % end SolveWithILP
 
