@@ -22,12 +22,27 @@ Renato Picelli (University of São Paulo), rpicelli@usp.br;
 
 *Unfortunately this one is proprietary to IBM, however there is an free student version available.
 
-# How to use:
+## How to use:
+
+First, try to install the conda environment by:
+```
+conda env create -f environment.yml -n fluid_tobs
+```
+
+Then, activate the environment:
+```
+conda activate fluid_tobs
+```
 
 In order to run the basic simulation type in your conda environment:
 ```
 python stokes_tobs.py
 ```
+
+## The results:
+
+The results can be seen in the output folder that is created and should look like this:
+![Alt Text](output/example.gif)
 
 ## Publications:
 
