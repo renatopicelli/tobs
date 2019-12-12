@@ -1,36 +1,33 @@
-# Topology Optimization of Binary Structures (TOBS)
+# Fluid Topology Optimization using TOBS approach
 
-Matlab code for topology optimization with binary design variables and sequential integer linear programming via the TOBS method.
+This repository uses the more open source libraries possible to optimize fluid flow using the TOBS method.
 
-## Authors:
+## Author of this repository:
+
+Bruno Caldas de Souza (University of Sao Paulo) , bruno.caldas@usp.br;
+
+## Author of the TOBS method:
 
 Raghavendra Sivapuram (University of California), rsivapur@eng.ucsd.edu;
 
 Renato Picelli (University of São Paulo), rpicelli@usp.br;
 
-## Numerical features:
+## Requirements (conda is recommended):
 
-1. Problem linearization;
-2. Move limits (constraints relaxation);
-3. Sensitivity filtering;
-4. Integer programming*.
+1. Python 3.5;
+2. Fenics 2018.1.0;
+3. Dolfin Adjoint 2018.1.0;
+4. Octave to read the .m files;
+5. CPlex* for Integer optimization.
 
-*This code uses the mixed-integer linear programming solver "intlinprog" from Matlab. For better performance, we recommend the use of the CPLEX library, free to download at IBM website. After installing CPLEX, the installation path,
+*Unfortunately this one is proprietary to IBM, however there is an free student version available.
 
-```matlab
-% Add CPLEX library.
-addpath('/opt/ibm/ILOG/CPLEX_Studio1271/cplex/matlab/x86-64_linux');
-addpath('/opt/ibm/ILOG/CPLEX_Studio1271/cplex/examples/src/');
+# How to use:
+
+In order to run the basic simulation type in your conda environment:
 ```
-
-and
-
-```matlab
-% options.Optimizer = 'cplex';
-options.Optimizer = 'intlinprog';
+python stokes_tobs.py
 ```
-
-at TopOpt/TOBS.m must be edited.
 
 ## Publications:
 
