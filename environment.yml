@@ -52,12 +52,12 @@ dependencies:
   - zlib=1.2.11=h7b6447c_3
   - pip:
     - backcall==0.1.0
-    - cplex==12.7.1.0
+      #- cplex==12.7.1.0
     - cycler==0.10.0
     - decorator==4.4.1
-    - dolfin-adjoint==2019.1.0
+      #- dolfin-adjoint==2018.1.0
     - fenics-dijitso==2018.1.0
-    - fenics-dolfin==2018.1.0
+      #- fenics-dolfin==2018.1.0
     - fenics-ffc==2018.1.0
     - fenics-fiat==2018.1.0
     - fenics-ufl==2018.1.0
@@ -91,7 +91,7 @@ dependencies:
     - scipy==1.3.3
     - setuptools==39.1.0
     - six==1.13.0
-    - sympy==1.4
+    - sympy==1.1.1
     - testresources==2.0.1
     - tornado==6.0.3
     - traitlets==4.3.3

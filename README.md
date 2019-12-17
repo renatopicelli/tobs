@@ -29,6 +29,15 @@ First, try to install the conda environment by:
 conda env create -f environment.yml -n fluid_tobs
 ```
 
+Then install Fenics 2018.1.0 and Dolfin-Adjoint 2018.1.0 from source:
+```
+git clone --branch 2018.1.0 git@bitbucket.org:fenics-project/dolfin.git
+```
+
+```
+git clone --branch 2018.1.0 git@bitbucket.org:dolfin-adjoint/pyadjoint.git
+```
+
 Then, activate the environment:
 ```
 conda activate fluid_tobs
