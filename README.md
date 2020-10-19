@@ -38,3 +38,5 @@ at TopOpt/TOBS.m must be edited.
 Linear Programming, Finite Elements in Analysis and Design 139 (2018) 49–61
 
 [2] R. Sivapuram, R. Picelli, Y.M. Xie, Topology optimization of binary microstructures involving various non-volume constraints, Computational Materials Science (2018) 154, 405-425
+
+[3] R. Picelli, R. Sivapuram, Y.M. Xie, A 101-line MATLAB code for topology optimization using binary variables and integer programming, Structural and Multidisciplinary Optimization (2020)
